@@ -6,6 +6,9 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 // Create scene
 const scene = new THREE.Scene()
 scene.background = new THREE.Color(0x87CEEB) // Sky blue
+// add ambient light
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.3)
+scene.add(ambientLight)
 
 
 // Add directional light for shadows
