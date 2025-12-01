@@ -2,6 +2,7 @@ import './style.css'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { initModelUI } from './modelUI.js'
 
 // Create scene
 const scene = new THREE.Scene()
@@ -48,18 +49,36 @@ controls.dampingFactor = 0.05
 controls.autoRotate = false
 controls.autoRotateSpeed = 5
 
+// ========== MODEL MANAGEMENT ==========
+const modelRegistry = {}
+
 // Initialize GLTF loader
 const gltfLoader = new GLTFLoader()
 
-// Function to load a model
+// Function to load a single model
 function loadModel(path) {
-  gltfLoader.load(path, (gltf) => {
-    const model = gltf.scene
-    scene.add(model)
-    console.log('Model loaded:', path)
-  }, undefined, (error) => {
-    console.error('Error loading model:', error)
+  return new Promise((resolve, reject) => {
+    gltfLoader.load(path, (gltf) => {
+      const model = gltf.scene
+      scene.add(model)
+      console.log('Model loaded:', path)
+      resolve(model)
+    }, undefined, (error) => {
+      console.error('Error loading model:', error)
+      reject(error)
+    })
   })
+}
+
+// Function to load multiple models
+async function loadModels(paths) {
+  try {
+    const models = await Promise.all(paths.map(path => loadModel(path)))
+    console.log('All models loaded successfully!')
+    return models
+  } catch (error) {
+    console.error('Error loading models:', error)
+  }
 }
 
 // Handle window resize
@@ -69,24 +88,41 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight)
 })
 
+// ========== MODEL MANAGEMENT ==========
+let modelUI = null
+
 // Animation loop
 function animate() {
   requestAnimationFrame(animate)
+  
+  // Update model movement
+  if (modelUI) {
+    modelUI.update()
+  }
+  
   controls.update()
   renderer.render(scene, camera)
 }
 
 animate()
 
-// Load the model
-loadModel('models/escena.glb')
+// Initialize UI
+modelUI = initModelUI(scene, camera, modelRegistry, controls)
 
-/*// Add a sphere
-const geometry = new THREE.SphereGeometry(1, 32, 32)
-const material = new THREE.MeshBasicMaterial({ color: 0x0077ff, wireframe: true })
-const sphere = new THREE.Mesh(geometry, material)
-scene.add(sphere)*/
+// Load models
+loadModels([
+  'models/escena.glb',
+  'models/Triceratops.glb',
+]).then((models) => {
+  // Register each loaded model with UI
+  models.forEach((model, index) => {
+    const modelName = index === 0 ? 'Escena' : 'Triceratops'
+    modelUI.registerModel(model, modelName)
+  })
+}).catch((error) => {
+  console.error('Failed to load models:', error)
+})
 
 // Export for use in other modules
-export { scene, camera, renderer }
+export { scene, camera, renderer, loadModel, loadModels }
         
